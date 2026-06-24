@@ -1,14 +1,15 @@
 #!/usr/bin/env python3
 """
-machunt — a macOS-native threat hunter.
+machunt - a macOS-native threat hunter.
 
 Most security tooling ignores macOS. machunt audits the places malware actually
-hides on a Mac — LaunchAgents/Daemons, login items, cron, shell start-up files,
-and running processes — flags the suspicious ones, and maps each finding to a
+hides on a Mac - LaunchAgents/Daemons, login items, cron, shell start-up files,
+and running processes - flags the suspicious ones, and maps each finding to a
 MITRE ATT&CK technique. Read-only: it never changes anything.
 
     machunt hunt            # audit this Mac
     machunt hunt --demo     # also scan a bundled fixture with a planted threat
+    machunt hunt --demo-only  # scan ONLY the bundled fixture (safe, isolated)
     machunt hunt --json     # machine-readable output
 
 Built for the Mac mini it runs on. No dependencies beyond `rich` (optional).
@@ -156,7 +157,10 @@ def hunt_processes() -> list[Finding]:
 
 
 # --------------------------------------------------------------------------- #
-def run(demo: bool) -> list[Finding]:
+def run(demo: bool, demo_only: bool = False) -> list[Finding]:
+    if demo_only:                       # isolated: scan ONLY the bundled fixture
+        f = hunt_launch([Path(__file__).parent / "demo/LaunchAgents"])
+        return sorted(f, key=lambda x: SEV_ORDER[x.severity], reverse=True)
     launch_dirs = [HOME / "Library/LaunchAgents",
                    Path("/Library/LaunchAgents"), Path("/Library/LaunchDaemons")]
     if demo:
@@ -187,7 +191,7 @@ def report(findings: list[Finding]):
                       f.attck, f.title, f.detail[:70])
         con.print(t)
         if counts["high"]:
-            con.print("[red bold]⚠ high-severity persistence found — investigate the paths above.[/]")
+            con.print("[red bold][!] high-severity persistence found. Investigate the paths above.[/]")
     except ImportError:
         for f in findings:
             print(f"[{f.severity.upper():6}] {f.attck:28} {f.title} :: {f.detail}")
@@ -199,13 +203,14 @@ def main(argv=None):
     sub = p.add_subparsers(dest="cmd", required=True)
     h = sub.add_parser("hunt", help="audit this Mac")
     h.add_argument("--demo", action="store_true", help="also scan the bundled threat fixture")
+    h.add_argument("--demo-only", action="store_true", help="scan ONLY the bundled fixture (isolated)")
     h.add_argument("--json", action="store_true", help="machine-readable output")
     args = p.parse_args(argv)
 
     if args.cmd == "hunt":
-        if sys.platform != "darwin" and not args.demo:
+        if sys.platform != "darwin" and not (args.demo or args.demo_only):
             print("note: live hunting targets macOS; use --demo elsewhere.", file=sys.stderr)
-        findings = run(args.demo)
+        findings = run(args.demo or args.demo_only, demo_only=args.demo_only)
         if args.json:
             print(json.dumps([asdict(f) for f in findings], indent=2))
         else:
