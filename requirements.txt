@@ -1,0 +1,2 @@
+# only dependency: pretty output (falls back to plain text without it)
+rich>=13.0
