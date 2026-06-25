@@ -1,0 +1,29 @@
+# machunt extra rules - loaded if pyyaml is importable; otherwise silently ignored.
+# Each entry: pattern (Python regex), why (human-readable reason), severity (high/medium/low/info),
+# attck (MITRE ATT&CK technique ID).
+# Add your own rules here to extend detection without touching machunt.py.
+
+- pattern: "ngrok|pagekite|localtunnel"
+  why: "tunneling tool creates external exposure"
+  severity: "medium"
+  attck: "T1572 (Protocol Tunneling)"
+
+- pattern: "msfvenom|msfconsole|metasploit"
+  why: "Metasploit framework component"
+  severity: "high"
+  attck: "T1059"
+
+- pattern: "\\bempire\\b|stager\\.py"
+  why: "PowerShell Empire or stager artifact"
+  severity: "high"
+  attck: "T1059.001"
+
+- pattern: "cobaltstrike|beacon\\.x64|artifact\\.exe"
+  why: "Cobalt Strike artifact"
+  severity: "high"
+  attck: "T1055"
+
+- pattern: "/private/var/folders/.*\\.sh"
+  why: "shell script running from temp user cache"
+  severity: "medium"
+  attck: "T1036.005"
